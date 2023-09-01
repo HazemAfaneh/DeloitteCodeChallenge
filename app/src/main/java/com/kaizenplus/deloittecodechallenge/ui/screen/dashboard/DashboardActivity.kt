@@ -1,4 +1,4 @@
-package com.kaizenplus.deloittecodechallenge
+package com.kaizenplus.deloittecodechallenge.ui.screen.dashboard
 
 
 import android.os.Bundle
@@ -38,7 +38,6 @@ import com.kaizenplus.deloittecodechallenge.ui.theme.DeloitteCodeChallengeTheme
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.IconButton
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
@@ -381,3 +380,7 @@ fun SearchScreen() {
         }
     }
 }
+data class TabItem(
+    val text: String,//Tab Title
+    val screen: @Composable ()->Unit//Tab Screen(can also take params)
+)

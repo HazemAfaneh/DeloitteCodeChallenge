@@ -2,4 +2,16 @@
 <resources>
 
     <style name="Theme.DeloitteCodeChallenge" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Splash.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenAnimatedIcon">
+            @drawable/ic_launcher_foreground
+        </item>
+        <item name="windowSplashScreenAnimationDuration">
+            1000
+        </item>
+        <item name="postSplashScreenTheme">
+            @style/Theme.DeloitteCodeChallenge
+        </item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
 </resources>
