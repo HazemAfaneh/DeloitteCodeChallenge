@@ -80,6 +80,8 @@ class DashboardActivity : ComponentActivity() {
             }
         }
     }
+
+    companion object
 }
 
 @OptIn(ExperimentalPagerApi::class)
