@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +48,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.minimumInteractiveComponentSize
@@ -71,7 +73,11 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.lifecycle.lifecycleScope
+import com.hazem.corelayer.model.User
 import com.kaizenplus.deloittecodechallenge.ui.screen.dashboard.DashboardActivity
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.Instant
@@ -81,13 +87,33 @@ import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val viewModel: LoginViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val activity = this
         setContent {
             DeloitteCodeChallengeTheme {
-                // A surface container using the 'background' color from the theme
+                var isLoading by remember { mutableStateOf(false) }
+
+                collectUIState({
+                    it?.let { result ->
+                        isLoading = result
+                    } ?: run {
+
+                    }
+                }, {
+                    startActivity(Intent(activity, DashboardActivity::class.java))
+                }, {
+                    it?.let {
+                        Toast.makeText(activity, it, Toast.LENGTH_SHORT).show()
+                    } ?: run {
+
+                    }
+                })
                 Surface(
                     modifier = Modifier.wrapContentSize(),
                     color = MaterialTheme.colorScheme.background
@@ -95,28 +121,84 @@ class MainActivity : ComponentActivity() {
                     val selectedText = remember { mutableStateOf("Login") }
                     Column {
                         Row {
-                            TwoTextsWithUnderline(firstText = "Login", secondText = "Register",selectedText = selectedText.value) {
+                            TwoTextsWithUnderline(
+                                firstText = "Login",
+                                secondText = "Register",
+                                selectedText = selectedText.value
+                            ) {
                                 selectedText.value = it
                             }
                         }
                         Row {
                             if (selectedText.value == "Login") {
-                                SignInScreen(){
-                                    startActivity(Intent(activity, DashboardActivity::class.java))
+                                SignInScreen() {
+                                    viewModel.actionTrigger(LoginViewModel.UIAction.Login(it))
+//
                                 }
                             } else if (selectedText.value == "Register") {
-                                SignUpScreen(activity)
+                                SignUpScreen(activity) {
+
+                                    viewModel.actionTrigger(LoginViewModel.UIAction.Register(it))
+
+                                }
                             }
                         }
                     }
+                    ProgressBar(isVisible = isLoading)
+
                 }
             }
+        }
+    }
+
+    private fun collectUIState(
+        handleLoading: (isLoading: Boolean?) -> Unit,
+        success: () -> Unit,
+        failed: (message: String?) -> Unit
+    ) {
+        lifecycleScope.launch {
+            viewModel.uiState.collect {
+                it?.let { result ->
+                    handleLoading(result.isLoading)
+                    if (result.isLoggedIn == true) {
+                        success()
+                    } else {
+                        failed(result.loginErrorMessage)
+                    }
+                }
+
+
+            }
+
         }
     }
 }
 
 @Composable
-fun TwoTextsWithUnderline(firstText:String, secondText:String,selectedText: String, onTextSelected: (String) -> Unit) {
+fun ProgressBar(
+    isVisible: Boolean
+) {
+    if (isVisible) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize(),
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(40.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun TwoTextsWithUnderline(
+    firstText: String,
+    secondText: String,
+    selectedText: String,
+    onTextSelected: (String) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth(),
@@ -166,9 +248,9 @@ fun TextWithUnderline(selectedText: String, text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun SignInScreen(onSubmit: () -> Unit) {
-    var userNameState by remember { mutableStateOf("2") }
-    var password by remember { mutableStateOf("3") }
+fun SignInScreen(onSubmit: (user: User) -> Unit) {
+    var emailState by remember { mutableStateOf("hazemafaneh@gmail.com") }
+    var passwordState by remember { mutableStateOf("3") }
 
 
     val focus = LocalFocusManager.current
@@ -206,23 +288,14 @@ fun SignInScreen(onSubmit: () -> Unit) {
                     OutlinedTextField(
                         modifier = Modifier
                             .fillMaxWidth(),
-                        value = userNameState,
+                        value = emailState,
                         label = { Text("Email") },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Email,
                             imeAction = ImeAction.Next
                         ),
-                        keyboardActions = KeyboardActions(
-                            onSend = {
-                                focus.clearFocus(force = true)
-                                keyboardController?.hide()
-                                if (userNameState.isNotBlank()) {
-                                    onSubmit()
-                                }
-                            }
-                        ),
                         onValueChange = {
-                            userNameState = it
+                            emailState = it
                         },
                         maxLines = 1
                     )
@@ -234,7 +307,7 @@ fun SignInScreen(onSubmit: () -> Unit) {
                     OutlinedTextField(
                         modifier = Modifier
                             .fillMaxWidth(),
-                        value = password,
+                        value = passwordState,
                         label = { Text("Password") },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
@@ -244,13 +317,13 @@ fun SignInScreen(onSubmit: () -> Unit) {
                             onSend = {
                                 focus.clearFocus(force = true)
                                 keyboardController?.hide()
-                                if (password.isNotBlank()) {
-                                    onSubmit()
+                                if (passwordState.isNotBlank()) {
+                                    onSubmit(User(email = emailState, password = passwordState))
                                 }
                             }
                         ),
                         onValueChange = {
-                            password = it
+                            passwordState = it
                         },
                         maxLines = 1
                     )
@@ -258,8 +331,10 @@ fun SignInScreen(onSubmit: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 Column(Modifier.padding(horizontal = 16.dp)) {
                     Button(
-                        enabled = userNameState.isNotBlank() && password.isNotBlank(),
-                        onClick = onSubmit,
+                        enabled = emailState.isNotBlank() && emailState.contains("@") && emailState.contains(
+                            "."
+                        ) && passwordState.isNotBlank(),
+                        onClick = { onSubmit(User(email = emailState, password = passwordState)) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Continue")
@@ -275,12 +350,12 @@ fun SignInScreen(onSubmit: () -> Unit) {
     ExperimentalMaterial3WindowSizeClassApi::class
 )
 @Composable
-fun SignUpScreen(activity: Activity) {
-    var fullname by remember { mutableStateOf("1") }
-    var username by remember { mutableStateOf("2") }
+fun SignUpScreen(activity: Activity, onSubmit: (user: User) -> Unit) {
+    var fullnameState by remember { mutableStateOf("1") }
+    var emailState by remember { mutableStateOf("2@.c") }
     var nationalIdState by remember { mutableStateOf("3") }
     var phoneNumberState by remember { mutableStateOf("4") }
-    var password by remember { mutableStateOf("duartesStrongPassword") }
+    var passwordState by remember { mutableStateOf("duartesStrongPassword") }
     var errorMessage by remember { mutableStateOf("") }
     var acceptedTerms by remember { mutableStateOf(true) }
     var showDialog by remember { mutableStateOf(false) }
@@ -311,8 +386,18 @@ fun SignUpScreen(activity: Activity) {
                 DatePeriod(18)
             )
         ) {
-
             Toast.makeText(activity, "Age should be more than 18", Toast.LENGTH_SHORT).show()
+        } else {
+            onSubmit(
+                User(
+                    fullName = fullnameState,
+                    email = emailState,
+                    nationalId = nationalIdState.toLong(),
+                    phoneNumber = phoneNumberState.toLong(),
+                    dateOfBirth = 11111111,
+                    password = passwordState
+                )
+            )
         }
     }
 
@@ -386,7 +471,7 @@ fun SignUpScreen(activity: Activity) {
                 Spacer(Modifier.height(24.dp))
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
-                    value = fullname,
+                    value = fullnameState,
                     label = { Text("Full name") },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Text,
@@ -397,13 +482,13 @@ fun SignUpScreen(activity: Activity) {
                             focus.moveFocus(FocusDirection.Next)
                         }
                     ),
-                    onValueChange = { fullname = it },
+                    onValueChange = { fullnameState = it },
                     singleLine = true
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
-                    value = username,
+                    value = emailState,
                     label = { Text("E-mail") },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
@@ -414,7 +499,7 @@ fun SignUpScreen(activity: Activity) {
                             focus.moveFocus(FocusDirection.Next)
                         }
                     ),
-                    onValueChange = { username = it },
+                    onValueChange = { emailState = it },
                     singleLine = true
                 )
                 Spacer(Modifier.height(8.dp))
@@ -486,7 +571,7 @@ fun SignUpScreen(activity: Activity) {
                     supportingText = {
                         Text(errorMessage)
                     },
-                    value = password,
+                    value = passwordState,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Done
@@ -500,7 +585,7 @@ fun SignUpScreen(activity: Activity) {
                     ),
                     visualTransformation = PasswordVisualTransformation(),
                     onValueChange = {
-                        password = it
+                        passwordState = it
                     },
                     singleLine = true
                 )
@@ -526,11 +611,12 @@ fun SignUpScreen(activity: Activity) {
                 Spacer(Modifier.height(16.dp))
                 Column(Modifier.padding(horizontal = 16.dp)) {
                     Button(
-                        enabled = acceptedTerms && fullname.isNotBlank()
-                                && username.isNotBlank()
-                                && password.isNotBlank()
+                        enabled = acceptedTerms && fullnameState.isNotBlank()
+                                && emailState.isNotBlank()
+                                && passwordState.isNotBlank()
                                 && nationalIdState.isNotBlank()
-                                && phoneNumberState.isNotBlank(),
+                                && phoneNumberState.isNotBlank()
+                                && emailState.contains("@") && emailState.contains("."),
                         onClick = onSubmit,
                         modifier = Modifier.fillMaxWidth()
                     ) {

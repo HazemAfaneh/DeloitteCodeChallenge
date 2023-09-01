@@ -8,6 +8,6 @@ import javax.inject.Inject
 class UserAuthenticationRepoImpl @Inject constructor() : UserAuthenticationRepo {
     override suspend fun isAuthenticated(): ResultData<Boolean> {
 
-        return ResultData.Success(true)
+        return ResultData.Success(false)
     }
 }
