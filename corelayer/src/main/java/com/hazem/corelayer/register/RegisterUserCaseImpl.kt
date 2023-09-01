@@ -1,6 +1,5 @@
 package com.hazem.corelayer.register
 
-import com.hazem.corelayer.model.ErrorEntity
 import com.hazem.corelayer.model.ResultData
 import com.hazem.corelayer.model.User
 import com.hazem.corelayer.model.doIfSuccess
@@ -15,9 +14,9 @@ class RegisterUserCaseImpl @Inject constructor(private val repo: RegisterRepo) :
         }
     }
 
-    private suspend fun saveUserToCache(user: User): ResultData<Boolean> { //cache dao
+    private suspend fun saveUserToCache(user: User): ResultData<Boolean> {
         delay(1000)
 //        return ResultData.Error(ErrorEntity.NoConnection)
-        return ResultData.Success(true)
+       return repo.saveUserToCache(user)
     }
 }
