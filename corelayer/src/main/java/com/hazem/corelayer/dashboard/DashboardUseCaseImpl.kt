@@ -22,17 +22,7 @@ class DashboardUseCaseImpl @Inject constructor(val repo: DashboardRepo) : Dashbo
             }
         } //test do if failure
             .doIfFailure {
-                var result = repo.getCacheItemsList()
-                when (result) {
-                    is ResultData.Success -> {
-                        result.data
-                    }
-
-                    else -> {
-                        emptyList()
-                    }
-                }
-
+                  repo.getCacheItemsList()
             }
     }
 }

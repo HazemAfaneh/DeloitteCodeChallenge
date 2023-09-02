@@ -10,6 +10,7 @@ import javax.inject.Inject
 class DashboardRepoImpl @Inject constructor(private val dao: DashboardDao) : DashboardRepo {
     override suspend fun getRemoteItemsList(): ResultData<List<DashboardItem>> {
         delay(2000)
+//        return ResultData.Error(ErrorEntity.NoConnection)
         return ResultData.Success(
             listOf(
                 DashboardItem(

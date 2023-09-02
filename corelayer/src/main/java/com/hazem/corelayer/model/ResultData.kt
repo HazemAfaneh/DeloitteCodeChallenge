@@ -13,14 +13,12 @@ inline fun <reified T, reified A> ResultData<in T>.doIfSuccess(callback: (T) -> 
     }
 }
 
-inline fun <T> ResultData<T>.doIfFailure(callback: () -> T): ResultData<T> {
+inline fun <T> ResultData<T>.doIfFailure(callback: () -> ResultData<T>): ResultData<T> {
 
     return when (this) {
         is ResultData.Error -> {
             callback()
-            this
         }
-
         else -> this as ResultData.Success
     }
 }

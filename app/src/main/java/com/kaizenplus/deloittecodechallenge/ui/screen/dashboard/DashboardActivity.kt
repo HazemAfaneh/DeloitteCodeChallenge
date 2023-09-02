@@ -297,7 +297,7 @@ fun UserDetailsRow(label: String, value: String) {
 fun SearchScreen(
     listOfItems: List<DashboardItem>
 ) {
-    var searchQuery by remember { mutableStateOf("Any") }
+    var searchQuery by remember { mutableStateOf("") }
 
     fun onSearch() {
 
