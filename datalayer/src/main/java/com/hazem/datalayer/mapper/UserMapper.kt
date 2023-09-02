@@ -13,3 +13,13 @@ fun User.toEntity(): UserEntity {
         password = password,
     )
 }
+fun UserEntity.toUser(): User {
+    return User(
+        fullName = fullName,
+        email = email,
+        nationalId = nationalId,
+        phoneNumber = phoneNumber,
+        dateOfBirth = dateOfBirth,
+        password = password,
+    )
+}

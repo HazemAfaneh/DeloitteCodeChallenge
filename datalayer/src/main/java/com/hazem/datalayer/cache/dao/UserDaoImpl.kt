@@ -5,6 +5,7 @@ import com.hazem.corelayer.model.ResultData
 import com.hazem.corelayer.model.User
 import com.hazem.datalayer.cache.entity.UserEntity
 import com.hazem.datalayer.mapper.toEntity
+import com.hazem.datalayer.mapper.toUser
 import io.objectbox.Box
 import javax.inject.Inject
 
@@ -13,7 +14,7 @@ class UserDaoImpl @Inject constructor(
 ):UserDao {
     override suspend fun insert(user: User): ResultData<Boolean> {
         return try {
-            userBox?.put(user.toEntity())
+            userBox?.put(user.toEntity())//mapping should be outside dao
             ResultData.Success(true)
 
         } catch (e:Exception){
@@ -21,12 +22,21 @@ class UserDaoImpl @Inject constructor(
         }
     }
 
-    override suspend fun getUser(user: User): ResultData<UserEntity?> {
+    override suspend fun deleteUser(): ResultData<Boolean> {
         return try {
-            ResultData.Success(userBox?.all?.get(0))
+            userBox?.removeAll()//mapping should be outside dao
+            ResultData.Success(true)
+        } catch (e:Exception){
+            ResultData.Error(ErrorEntity.InternalError(e.message?:"Error in delete user"))
+        }
+    }
+
+    override suspend fun getUser(): ResultData<User?> {
+        return try {
+            ResultData.Success(userBox?.all?.get(0)?.toUser())
 
         } catch (e:Exception){
-            ResultData.Error(ErrorEntity.InternalError(e.message?:"Error in insertion"))
+            ResultData.Error(ErrorEntity.InternalError(e.message?:"Error in getting user"))
         }
     }
 }

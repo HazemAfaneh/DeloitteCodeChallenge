@@ -7,8 +7,13 @@ import com.hazem.corelayer.register.RegisterUserCaseImpl
 import com.hazem.corelayer.repo.LoginRepo
 import com.hazem.corelayer.repo.RegisterRepo
 import com.hazem.corelayer.repo.UserAuthenticationRepo
+import com.hazem.corelayer.repo.UserRepo
 import com.hazem.corelayer.usecase.UserAuthenticationUseCase
 import com.hazem.corelayer.usecase.UserAuthenticationUseCaseImpl
+import com.hazem.corelayer.user.LogoutUserUseCase
+import com.hazem.corelayer.user.LogoutUserUseCaseImpl
+import com.hazem.corelayer.user.UserUseCase
+import com.hazem.corelayer.user.UserUseCaseImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,8 +30,18 @@ class UseCaseModule {
 
     @Singleton
     @Provides
+    fun provideUserUseCase( repo: UserRepo): UserUseCase =
+        UserUseCaseImpl(repo)
+
+    @Singleton
+    @Provides
     fun provideLoginUseCase( repo: LoginRepo): LoginUseCase =
         LoginUseCaseImpl(repo)
+
+    @Singleton
+    @Provides
+    fun provideLogoutUserUseCase( repo: UserRepo): LogoutUserUseCase =
+        LogoutUserUseCaseImpl(repo)
 
     @Singleton
     @Provides

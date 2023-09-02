@@ -1,10 +1,10 @@
-package com.kaizenplus.deloittecodechallenge.ui.screen.login
+package com.kaizenplus.deloittecodechallenge.ui.screen.dashboard
 
 import android.content.Context
 import androidx.lifecycle.viewModelScope
-import com.hazem.corelayer.login.LoginUseCase
 import com.hazem.corelayer.model.User
-import com.hazem.corelayer.register.RegisterUserCase
+import com.hazem.corelayer.user.LogoutUserUseCase
+import com.hazem.corelayer.user.UserUseCase
 import com.kaizenplus.deloittecodechallenge.BaseViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -16,98 +16,96 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class LoginViewModel @Inject constructor(
-    private val loginUseCase: LoginUseCase,
-    private val registerUserCase: RegisterUserCase,
+class DashboardViewModel @Inject constructor(
+    private val userUseCase: UserUseCase,
+    private val logoutUserUseCase: LogoutUserUseCase,
     @ApplicationContext context: Context
 ) : BaseViewModel(context) {
-    //    private val _uiState: MutableSharedFlow<UiState?> = MutableSharedFlow()
-//    val uiState: MutableSharedFlow<UiState?> get() = _uiState
+
     private val _uiState: MutableStateFlow<UiState?> = MutableStateFlow(null)
     val uiState: StateFlow<UiState?> get() = _uiState
 
     data class UiState(
         val isLoading: Boolean? = null,
-        val isLoggedIn: Boolean? = null,
-        val loginErrorMessage: String? = null,
-        val registerErrorMessage: String? = null,
+        val isLoggedOut: Boolean? = null,
+        val userData: User? = null,
+        val errorMessage: String? = null
     )
 
     sealed class UIAction {
-        data class Login(val user: User) : UIAction()
-        data class Register(val user: User) : UIAction()
-    }
-    private suspend fun login(user: User) {
-        coroutineScope {
-            handleResult(loginUseCase(user), {
-                viewModelScope.launch {
-
-                    _uiState.emit(
-                        UiState(
-                            isLoading = false,
-                            isLoggedIn = it,
-                        )
-                    )
-                }
-            }, {
-                viewModelScope.launch {
-                    cancel()
-                    _uiState.emit(
-                        UiState(
-                            isLoading = false,
-                            isLoggedIn = false,
-                            loginErrorMessage = it
-                        )
-                    )
-                }
-            })
-        }
-
-
-    }
-
-    private suspend fun register(user: User) {
-        coroutineScope {
-            handleResult(registerUserCase(user), {
-//                actionTrigger(UIAction.Login(user))
-                viewModelScope.launch {
-                    _uiState.emit(
-                        UiState(
-                            isLoading = false,
-                            isLoggedIn = it,
-                        )
-                    )
-                }
-            }, {
-                viewModelScope.launch {
-                    cancel()
-                    _uiState.emit(
-                        UiState(
-                            isLoading = false,
-                            isLoggedIn = false,
-                            registerErrorMessage = it
-                        )
-                    )
-                }
-            })
-        }
-
-
+        object GetUserInfo : UIAction()
+        data class Logout(val name:String) : UIAction()
     }
 
     fun actionTrigger(action: UIAction) {
         viewModelScope.launch {
             _uiState.emit(UiState(isLoading = true))
             when (action) {
-                is UIAction.Login -> {
-                    login(action.user)
+                is UIAction.GetUserInfo -> {
+                    getUserInfo()
                 }
 
-                is UIAction.Register -> {
-                    register(action.user)
+                is UIAction.Logout -> {
+                    logout(action.name)
                 }
             }
 
         }
     }
+
+    private suspend fun getUserInfo() {
+        coroutineScope {
+            handleResult(userUseCase(), {
+                viewModelScope.launch {
+                    _uiState.emit(
+                        UiState(
+                            isLoading = false,
+                            userData = it,
+                        )
+                    )
+                }
+            }, {
+                viewModelScope.launch {
+                    cancel()
+                    _uiState.emit(
+                        UiState(
+                            isLoading = false,
+                            errorMessage = it
+                        )
+                    )
+                }
+            })
+        }
+    }
+    private suspend fun logout(name:String) {
+        coroutineScope {
+            handleResult(logoutUserUseCase(name), {
+                viewModelScope.launch {
+                    if(it){
+                        _uiState.emit(
+                            UiState(
+                                isLoading = false,
+                                userData = null,
+                                isLoggedOut = true
+                            )
+                        )
+                    } else {
+
+                    }
+                }
+            }, {
+                viewModelScope.launch {
+                    cancel()
+                    _uiState.emit(
+                        UiState(
+                            isLoading = false,
+                            errorMessage = it
+                        )
+                    )
+                }
+            })
+        }
+    }
+
+
 }
