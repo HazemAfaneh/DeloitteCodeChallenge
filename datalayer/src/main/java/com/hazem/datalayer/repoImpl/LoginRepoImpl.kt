@@ -5,14 +5,13 @@ import com.hazem.corelayer.model.ResultData
 import com.hazem.corelayer.model.User
 import com.hazem.corelayer.repo.LoginRepo
 import kotlinx.coroutines.delay
+import javax.inject.Inject
 
-class LoginRepoImpl : LoginRepo {
+class LoginRepoImpl @Inject constructor(private val authenticator: Authenticator) : LoginRepo {
     override suspend fun login(user: User): ResultData<Boolean> {
         delay(2000)
-
-        return ResultData.Error(ErrorEntity.NoConnection)
-//        return ResultData.Success(
-//           true
-//        )
+          authenticator.login(user)
+        return ResultData.Error(ErrorEntity.Unknown)
     }
+
 }

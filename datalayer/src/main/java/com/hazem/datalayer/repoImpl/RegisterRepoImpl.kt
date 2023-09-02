@@ -7,9 +7,13 @@ import com.hazem.datalayer.cache.dao.UserDaoImpl
 import kotlinx.coroutines.delay
 import javax.inject.Inject
 
-class RegisterRepoImpl @Inject constructor(private val daoImpl: UserDaoImpl) : RegisterRepo {
+class RegisterRepoImpl @Inject constructor(
+    private val daoImpl: UserDaoImpl,
+    private val authenticator: Authenticator
+) : RegisterRepo {
     override suspend fun register(user: User): ResultData<Boolean> {
         delay(2000) // register api call
+        authenticator.register(user)
         return ResultData.Success(true)
     }
 

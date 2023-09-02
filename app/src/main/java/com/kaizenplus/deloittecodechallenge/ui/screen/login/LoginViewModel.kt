@@ -1,19 +1,19 @@
 package com.kaizenplus.deloittecodechallenge.ui.screen.login
 
+import android.accounts.AccountManager
 import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.viewModelScope
 import com.hazem.corelayer.login.LoginUseCase
 import com.hazem.corelayer.model.ErrorEntity
+import com.hazem.corelayer.model.ResultData
 import com.hazem.corelayer.model.User
 import com.hazem.corelayer.register.RegisterUserCase
-import com.hazem.corelayer.usecase.UserAuthenticationUseCase
 import com.kaizenplus.deloittecodechallenge.BaseViewModel
-import com.kaizenplus.deloittecodechallenge.ui.screen.splashscreen.SplashViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -41,11 +41,26 @@ class LoginViewModel @Inject constructor(
         data class Login(val user: User) : UIAction()
         data class Register(val user: User) : UIAction()
     }
+    suspend fun submitUserToAuthenticator(user: User): ResultData<Intent> {
+        return try {
+            coroutineScope {
+                val res = Intent()
+                res.putExtra(AccountManager.KEY_ACCOUNT_NAME, user.fullName)
+                res.putExtra(AccountManager.KEY_ACCOUNT_TYPE, "example.com")
+                res.putExtra(AccountManager.KEY_AUTHTOKEN, "authtoken")
+                res.putExtra("PARAM_USER_PASS", user.password)
+                ResultData.Success(res)
+            }
+        } catch (e: Exception) {
+            ResultData.Error(ErrorEntity.InternalError(e.message ?: "Unknown error"))
+        }
 
+    }
     private suspend fun login(user: User) {
         coroutineScope {
             handleResult(loginUseCase(user), {
                 viewModelScope.launch {
+
                     _uiState.emit(
                         UiState(
                             isLoading = false,
