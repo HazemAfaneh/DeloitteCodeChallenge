@@ -1,6 +1,7 @@
 package com.kaizenplus.deloittecodechallenge.di
 
 import android.app.Application
+import com.hazem.datalayer.cache.entity.DashboardItemEntity
 import com.hazem.datalayer.cache.entity.MyObjectBox
 import com.hazem.datalayer.cache.entity.UserEntity
 import dagger.Module
@@ -20,6 +21,11 @@ class BoxStoreModule {
     @Provides
     fun provideUserBox(boxStore: BoxStore): Box<UserEntity>? {
         return boxStore.boxFor(UserEntity::class.java)
+    }
+    @Singleton
+    @Provides
+    fun provideDashboardItemBox(boxStore: BoxStore): Box<DashboardItemEntity>? {
+        return boxStore.boxFor(DashboardItemEntity::class.java)
     }
     @Singleton
     @Provides

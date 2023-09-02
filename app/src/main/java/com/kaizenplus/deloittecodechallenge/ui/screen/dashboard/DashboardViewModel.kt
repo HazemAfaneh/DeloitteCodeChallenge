@@ -2,6 +2,8 @@ package com.kaizenplus.deloittecodechallenge.ui.screen.dashboard
 
 import android.content.Context
 import androidx.lifecycle.viewModelScope
+import com.hazem.corelayer.dashboard.DashboardUseCase
+import com.hazem.corelayer.model.DashboardItem
 import com.hazem.corelayer.model.User
 import com.hazem.corelayer.user.LogoutUserUseCase
 import com.hazem.corelayer.user.UserUseCase
@@ -19,6 +21,7 @@ import javax.inject.Inject
 class DashboardViewModel @Inject constructor(
     private val userUseCase: UserUseCase,
     private val logoutUserUseCase: LogoutUserUseCase,
+    private val dashboardUseCase: DashboardUseCase,
     @ApplicationContext context: Context
 ) : BaseViewModel(context) {
 
@@ -29,12 +32,14 @@ class DashboardViewModel @Inject constructor(
         val isLoading: Boolean? = null,
         val isLoggedOut: Boolean? = null,
         val userData: User? = null,
-        val errorMessage: String? = null
+        val errorMessage: String? = null,
+        val dashboardItem: List<DashboardItem>? = null
     )
 
     sealed class UIAction {
         object GetUserInfo : UIAction()
-        data class Logout(val name:String) : UIAction()
+        object GetDashboardData : UIAction()
+        data class Logout(val name: String) : UIAction()
     }
 
     fun actionTrigger(action: UIAction) {
@@ -48,8 +53,40 @@ class DashboardViewModel @Inject constructor(
                 is UIAction.Logout -> {
                     logout(action.name)
                 }
+
+                is UIAction.GetDashboardData -> {
+                    getDashboardData()
+                }
             }
 
+        }
+    }
+
+    private fun getDashboardData() {
+        viewModelScope.launch {
+            coroutineScope {
+                handleResult(dashboardUseCase(), {
+                    viewModelScope.launch {
+                        _uiState.emit(
+                            UiState(
+                                isLoading = false,
+                                userData = null,
+                                dashboardItem = it
+                            )
+                        )
+                    }
+                }, {
+                    viewModelScope.launch {
+                        cancel()
+                        _uiState.emit(
+                            UiState(
+                                isLoading = false,
+                                errorMessage = it
+                            )
+                        )
+                    }
+                })
+            }
         }
     }
 
@@ -77,11 +114,12 @@ class DashboardViewModel @Inject constructor(
             })
         }
     }
-    private suspend fun logout(name:String) {
+
+    private suspend fun logout(name: String) {
         coroutineScope {
             handleResult(logoutUserUseCase(name), {
                 viewModelScope.launch {
-                    if(it){
+                    if (it) {
                         _uiState.emit(
                             UiState(
                                 isLoading = false,

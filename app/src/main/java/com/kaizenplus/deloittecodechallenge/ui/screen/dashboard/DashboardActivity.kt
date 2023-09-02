@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -65,6 +66,7 @@ import coil.compose.AsyncImage
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
+import com.hazem.corelayer.model.DashboardItem
 import com.hazem.corelayer.model.User
 import com.kaizenplus.deloittecodechallenge.ui.screen.login.MainActivity
 import com.kaizenplus.deloittecodechallenge.ui.screen.login.ProgressBar
@@ -82,7 +84,7 @@ class DashboardActivity : ComponentActivity() {
         setContent {
             var isLoading by remember { mutableStateOf(false) }
             var userState by remember { mutableStateOf(User(email = "", password = "")) }
-//            var dashboardList by remember { mutableStateOf(false) }
+            var dashboardList by remember { mutableStateOf(emptyList<DashboardItem>()) }
             collectUIState({
                 it?.let { result ->
                     isLoading = result
@@ -92,6 +94,8 @@ class DashboardActivity : ComponentActivity() {
             }, {
                 userState = it
             }, {
+                dashboardList = it
+            }, {
                 it?.let {
                     Toast.makeText(activity, it, Toast.LENGTH_SHORT).show()
                 } ?: run {
@@ -99,13 +103,14 @@ class DashboardActivity : ComponentActivity() {
                 }
             })
             viewModel.actionTrigger(DashboardViewModel.UIAction.GetUserInfo)
+            viewModel.actionTrigger(DashboardViewModel.UIAction.GetDashboardData)
             DeloitteCodeChallengeTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PagingScreen(userState)
+                    PagingScreen(userState, dashboardList)
                     ProgressBar(isVisible = isLoading)
                 }
             }
@@ -115,7 +120,8 @@ class DashboardActivity : ComponentActivity() {
     @OptIn(ExperimentalPagerApi::class)
     @Composable
     fun PagingScreen(//2 ui states user state and list state
-        user: User
+        user: User,
+        listOfItems: List<DashboardItem>
     ) {
         val coroutineScope = rememberCoroutineScope()
         val pagerState = rememberPagerState()
@@ -123,7 +129,7 @@ class DashboardActivity : ComponentActivity() {
         val tabRowItems = listOf(//List of tabs to use later
             TabItem(
                 text = "Dashboard",
-                screen = { SearchScreen() }
+                screen = { SearchScreen(listOfItems) }
             ),//First TabItem
             TabItem(
                 text = "More",
@@ -164,6 +170,7 @@ class DashboardActivity : ComponentActivity() {
     private fun collectUIState(
         handleLoading: (isLoading: Boolean?) -> Unit,
         getUserData: (User) -> Unit,
+        getDashboardData: (List<DashboardItem>) -> Unit,
         failed: (message: String?) -> Unit
     ) {
         lifecycleScope.launch {
@@ -172,13 +179,14 @@ class DashboardActivity : ComponentActivity() {
                     handleLoading(result.isLoading)
                     if (result.errorMessage != null) {
                         failed(result.errorMessage)
-                    } else
-                        if (result.userData != null)
-                            getUserData(result.userData)
-                        else if (result.isLoggedOut == true) {
-                            startActivity(Intent(this@DashboardActivity, MainActivity::class.java))
-                            finish()
-                        }
+                    } else if (result.userData != null)
+                        getUserData(result.userData)
+                    else if (!result.dashboardItem.isNullOrEmpty())
+                        getDashboardData(result.dashboardItem)
+                    else if (result.isLoggedOut == true) {
+                        startActivity(Intent(this@DashboardActivity, MainActivity::class.java))
+                        finish()
+                    }
 
                 }
 
@@ -286,7 +294,9 @@ fun UserDetailsRow(label: String, value: String) {
 }
 
 @Composable
-fun SearchScreen() {
+fun SearchScreen(
+    listOfItems: List<DashboardItem>
+) {
     var searchQuery by remember { mutableStateOf("Any") }
 
     fun onSearch() {
@@ -352,13 +362,9 @@ fun SearchScreen() {
     }
 
     @Composable
-    fun MessageItem(
+    fun ItemComposable(
         onClick: () -> Unit,
-        recipient: String,
-        snippet: String,
-        recipientHighlight: String,
-        timestamp: String,
-        image: String
+        item: DashboardItem
     ) {
         Surface(
             onClick = onClick,
@@ -372,10 +378,10 @@ fun SearchScreen() {
                 ),
                 headlineContent = {
                     val recipientString = buildAnnotatedString {
-                        append(recipient)
-                        val start = recipient.lowercase().indexOf(recipientHighlight.lowercase())
+                        append(item.name)
+                        val start = item.name.lowercase().indexOf(item.nameHighlight.lowercase())
                         if (start != -1) {
-                            val end = start + recipientHighlight.length
+                            val end = start + item.name.length
                             addStyle(
                                 style = SpanStyle(fontWeight = FontWeight.ExtraBold),
                                 start = start,
@@ -386,12 +392,12 @@ fun SearchScreen() {
                     Text(recipientString, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 },
                 supportingContent = {
-                    Text(snippet)
+                    Text(item.jobTitle)
                 },
-                trailingContent = { Text(timestamp) },
+                trailingContent = { Text(item.timestamp) },
                 leadingContent = {
                     AsyncImage(
-                        model = image,
+                        model = item.image,
                         modifier = Modifier
                             .size(48.dp)
                             .clip(RectangleShape),
@@ -431,47 +437,15 @@ fun SearchScreen() {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                         Box(modifier = Modifier.padding(padding)) {
                             LazyColumn {
+                                items(listOfItems) { item ->
+                                    ItemComposable(
+                                        onClick = {
 
-                                item {
-                                    MessageItem(
-                                        onClick = { /*TODO */ },
-                                        recipient = "Emily Green",
-                                        image = "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=688&q=80",
-                                        snippet = "Any plans for the weekend?",
-                                        recipientHighlight = searchQuery,
-                                        timestamp = "1m"
+                                        },
+                                        item
                                     )
                                 }
-                                item {
-                                    MessageItem(
-                                        onClick = { /*TODO */ },
-                                        recipient = "Stew Wonder",
-                                        image = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80",
-                                        snippet = "Sounds like a plan 👌",
-                                        recipientHighlight = searchQuery,
-                                        timestamp = "12m"
-                                    )
-                                }
-                                item {
-                                    MessageItem(
-                                        onClick = { /*TODO */ },
-                                        recipient = "Mark Thompson",
-                                        image = "https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80",
-                                        snippet = " It's part of my 'cooking plans'",
-                                        recipientHighlight = searchQuery,
-                                        timestamp = "Fri"
-                                    )
-                                }
-                                item {
-                                    MessageItem(
-                                        onClick = { /*TODO */ },
-                                        recipient = "Stella Spanakopita",
-                                        image = "https://images.unsplash.com/photo-1535468850893-d6e543fbd7f5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80",
-                                        snippet = "Plan it. I'll be there!",
-                                        recipientHighlight = searchQuery,
-                                        timestamp = "Sat"
-                                    )
-                                }
+
                             }
                         }
                     }

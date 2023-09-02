@@ -1,9 +1,12 @@
 package com.kaizenplus.deloittecodechallenge.di
 
+import com.hazem.corelayer.dashboard.DashboardUseCase
+import com.hazem.corelayer.dashboard.DashboardUseCaseImpl
 import com.hazem.corelayer.login.LoginUseCase
 import com.hazem.corelayer.login.LoginUseCaseImpl
 import com.hazem.corelayer.register.RegisterUserCase
 import com.hazem.corelayer.register.RegisterUserCaseImpl
+import com.hazem.corelayer.repo.DashboardRepo
 import com.hazem.corelayer.repo.LoginRepo
 import com.hazem.corelayer.repo.RegisterRepo
 import com.hazem.corelayer.repo.UserAuthenticationRepo
@@ -47,5 +50,10 @@ class UseCaseModule {
     @Provides
     fun provideRegisterUserCaseUseCase( repo: RegisterRepo): RegisterUserCase =
         RegisterUserCaseImpl(repo)
+
+    @Singleton
+    @Provides
+    fun provideDashboardUseCase( repo: DashboardRepo): DashboardUseCase =
+        DashboardUseCaseImpl(repo)
 
 }
