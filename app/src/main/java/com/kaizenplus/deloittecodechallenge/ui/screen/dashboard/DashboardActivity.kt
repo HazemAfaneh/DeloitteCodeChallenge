@@ -110,7 +110,18 @@ class DashboardActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PagingScreen(userState, dashboardList)
+                    PagingScreen(userState, dashboardList) { searchText ->
+                        if(searchText.isNullOrEmpty())
+                        {
+                            viewModel.actionTrigger(DashboardViewModel.UIAction.GetDashboardData)
+                        } else
+                        {
+                            dashboardList = dashboardList.filter {
+                                it.name.contains(searchText, ignoreCase = true)
+                            }
+                        }
+
+                    }
                     ProgressBar(isVisible = isLoading)
                 }
             }
@@ -121,7 +132,8 @@ class DashboardActivity : ComponentActivity() {
     @Composable
     fun PagingScreen(//2 ui states user state and list state
         user: User,
-        listOfItems: List<DashboardItem>
+        listOfItems: List<DashboardItem>,
+        search: (String) -> Unit
     ) {
         val coroutineScope = rememberCoroutineScope()
         val pagerState = rememberPagerState()
@@ -129,7 +141,11 @@ class DashboardActivity : ComponentActivity() {
         val tabRowItems = listOf(//List of tabs to use later
             TabItem(
                 text = "Dashboard",
-                screen = { SearchScreen(listOfItems) }
+                screen = {
+                    SearchScreen(listOfItems) {
+                        search(it)
+                    }
+                }
             ),//First TabItem
             TabItem(
                 text = "More",
@@ -295,13 +311,11 @@ fun UserDetailsRow(label: String, value: String) {
 
 @Composable
 fun SearchScreen(
-    listOfItems: List<DashboardItem>
+    listOfItems: List<DashboardItem>,
+    search: (String) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
-    fun onSearch() {
-
-    }
 
     @Composable
     fun SearchBar(
@@ -430,7 +444,7 @@ fun SearchScreen(
                         modifier = Modifier.fillMaxWidth(),
                         searchQuery = searchQuery,
                         onSearchQueryChange = { searchQuery = it },
-                        onImeSearch = { onSearch() }
+                        onImeSearch = { search(searchQuery) },
                     )
                 }
                 Row {
